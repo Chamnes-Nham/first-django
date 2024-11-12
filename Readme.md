@@ -21,23 +21,23 @@ This project is a simple user management system built with Django, featuring ess
 - [![Static Badge](https://img.shields.io/badge/SQLite-3-lightgrey.svg)](https://www.sqlite.org/)
 
 ## Project Structure:
-
+```sh
 staff_management/
 ├── accounts/  
-    ├──__pychache__  
-    ├──middlewares   
-    |    ├──auditlog_middleware.py
+│   ├──__pychache__  
+│   ├──middlewares   
+│   |    ├──auditlog_middleware.py
 │   ├── migrations/        
 │   ├── models
-    |   ├──__pycache__
-    |   ├──__init__.py
-    |   ├──accounts_model.py      
+│   |   ├──__pycache__
+│   |   ├──__init__.py
+│   |   ├──accounts_model.py      
 │   ├── __init__.py         
 │   ├── admin.py            
 │   ├── apps.py      
-    ├── permission.py
-    ├── serializer.py
-    ├── tests.py            
+│   ├── permission.py
+│   ├── serializer.py
+│   ├── tests.py            
 │   ├── urls.py            
 │   └── views.py            
 ├── staff_management/         
@@ -50,6 +50,7 @@ staff_management/
 ├── Readme.md
 ├── requirements.txt              
 
+```
 
 ## Installation Instructions:
 1. Clone the Project:
