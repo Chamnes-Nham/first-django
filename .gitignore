@@ -1,87 +1,22 @@
-# Byte-compiled / optimized / DLL files
+# Virtual environment
+.venv/
+
+# Python cache files
 __pycache__/
 *.py[cod]
-*$py.class
 
-# C extensions
-*.so
+# Django migrations
+*/migrations/
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Django stuff:
-*.log
-local_settings.py
+# SQLite database
 db.sqlite3
-media/
-staticfiles/
 
-# JWT and token files
-*.jwt
+# Static files
+static/
 
-# Swagger / API docs (e.g., auto-generated docs)
-docs/
-
-# Python virtual environment
-.venv/
-venv/
-ENV/
-env/
-env.bak/
-
-# Pytest and testing results
-.pytest_cache/
-.tox/
-coverage/
-*.cover
-.hypothesis/
-.coverage
-
-# Environment variable files
-.env
-.env.*
-
-# IDE specific settings
-.idea/
-.vscode/
-*.swp
-
-# Celery
-celerybeat-schedule
-
-# macOS
+# Ignore system files
 .DS_Store
 
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# Pycharm
-*.iml
-*.iws
-*.ipr
+# Ignore IDE specific files
+.vscode/
 .idea/
-
-# Code logs
-logs/
-*.log
-
-# Other
-*.bak
-*.tmp
