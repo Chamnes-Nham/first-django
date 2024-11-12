@@ -38,10 +38,10 @@ staticfiles/
 docs/
 
 # Python virtual environment
+.venv/
 venv/
 ENV/
 env/
-.venv/
 env.bak/
 
 # Pytest and testing results
