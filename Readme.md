@@ -1,15 +1,36 @@
 ## PROJECT_NAME:
-USERMANAGEMENT
+STAFF MANAGEMENT SYSTEM
 
 
 ## About This Project:
-This project is a simple user management system built with Django, featuring essential user functionalities such as registration, login, profile management, and an admin interface for user and permission management.
+The primary purpose of this project is to create a comprehensive user management system using Django REST Framework that includes advanced features such as:
+
+- User Authentication: Secure login, signup, and logout functionalities.
+- Role-Based Access Control: Permissions tailored for different user roles (admin, staff, and customers).
+- Detailed User Profile Management: Manage and view user details with custom fields.
+- Stateless and Stateful Authentication: Implement both JWT-based token authentication and session-based stateful authentication.
+- Advanced Features: Includes rate limiting, audit trails, and multi-factor authentication.
+- Comprehensive API Documentation: Utilizing Spectacular Swagger for clear and interactive API exploration.
+
+This project serves as a learning and development platform, showcasing skills in building secure, scalable, and feature-rich backend systems.
 
 ## Features:
+````sh
 -User Authentication: Enables users to sign up, log in, and log out securely.
 -User Profile Management: Each user has a profile page where they can view and manage their bio and profile picture.
 -Admin Dashboard: Admin users have access to a dashboard to add, edit, and delete users, as well as manage permissions.
 -Permissions: Role-based permissions restrict actions available to each user based on their assigned role.
+````
+
+## Core Feature:
+````sh
+User Authentication: Signup, login, and logout functionality.
+Role-Based Permissions: Custom permissions for admin, staff, and customer roles.
+Detailed User Profiles: Profile views and management.
+JWT and Stateful Authentication: Both token-based and session-based authentication.
+Rate Limiting: Throttling for enhanced security.
+API Documentation: Implemented using Spectacular Swagger.
+````
 
 ## Technology:
 
@@ -61,40 +82,38 @@ git clone https://github.com/Chamnes-Nham/first-django.git
 ```sh
 pip install -r requirements.txt
 ```
-2. Create and Activate the Virtual Environment:
+3. Create and Activate the Virtual Environment:
 
 ````sh
 Windows:
 py -m venv .venv
 source .venv/Scripts/activate
 macOS/Linux:
-sh
-Copy code
 python3 -m venv .venv
 source .venv/bin/activate
-Deactivate: Use deactivate to exit the virtual environment.
+Deactivate: Use 'deactivate' to exit the virtual environment.
 ````
-3. Set Up the Database:
+4. Set Up the Database:
 ````sh
-Copy code
+
 python manage.py makemigrations
 python manage.py migrate
 ````
-4. Create an Admin/Superuser:
+5. Create an Admin/Superuser:
 ````sh
-Copy code
+
 python manage.py createsuperuser
 ````
-5. Install Required Libraries:
+6. Install Required Libraries:
 ````sh
-Copy code
+
 pip install Pillow
 ````
-6. Start the Server:
+7. Start the Server:
 Navigate to the project directory and run:
 
 ```sh
-Copy code
+
 cd usermanagement
 python manage.py runserver
 ```
