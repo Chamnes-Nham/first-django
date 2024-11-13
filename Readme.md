@@ -3,7 +3,7 @@ STAFF MANAGEMENT SYSTEM
 
 
 ## About This Project:
-The primary purpose of this project is to create a comprehensive user management system using Django REST Framework that includes advanced features such as:
+The primary purpose of this project is to create a comprehensive staff management system using Django REST Framework that includes advanced features such as:
 
 - User Authentication: Secure login, signup, and logout functionalities.
 - Role-Based Access Control: Permissions tailored for different user roles (admin, staff, and customers).
@@ -12,15 +12,6 @@ The primary purpose of this project is to create a comprehensive user management
 - Advanced Features: Includes rate limiting, audit trails, and multi-factor authentication.
 - Comprehensive API Documentation: Utilizing Spectacular Swagger for clear and interactive API exploration.
 
-This project serves as a learning and development platform, showcasing skills in building secure, scalable, and feature-rich backend systems.
-
-## Features:
-````sh
--User Authentication: Enables users to sign up, log in, and log out securely.
--User Profile Management: Each user has a profile page where they can view and manage their bio and profile picture.
--Admin Dashboard: Admin users have access to a dashboard to add, edit, and delete users, as well as manage permissions.
--Permissions: Role-based permissions restrict actions available to each user based on their assigned role.
-````
 
 ## Core Feature:
 ````sh
@@ -78,12 +69,8 @@ staff_management/
 ````sh
 git clone https://github.com/Chamnes-Nham/first-django.git
 ````
-2. generate all of dependency:
-```sh
-pip install -r requirements.txt
-```
-3. Create and Activate the Virtual Environment:
 
+2. Create and Activate the Virtual Environment:
 ````sh
 Windows:
 py -m venv .venv
@@ -93,27 +80,31 @@ python3 -m venv .venv
 source .venv/bin/activate
 Deactivate: Use 'deactivate' to exit the virtual environment.
 ````
-4. Set Up the Database:
-````sh
 
+3. generate all of dependency:
+```sh
+pip install -r requirements.txt
+```
+
+4. Set Up the Database or apply migrate:
+````sh
 python manage.py makemigrations
 python manage.py migrate
 ````
+
 5. Create an Admin/Superuser:
 ````sh
-
 python manage.py createsuperuser
 ````
+
 6. Install Required Libraries:
 ````sh
-
 pip install Pillow
 ````
+
 7. Start the Server:
 Navigate to the project directory and run:
-
 ```sh
-
 cd usermanagement
 python manage.py runserver
 ```
