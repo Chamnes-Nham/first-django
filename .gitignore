@@ -34,7 +34,7 @@ staticfiles/
 # JWT and token files
 *.jwt
 
-# Swagger / API docs (e.g., auto-generated docs)
+# Swagger 
 docs/
 
 # Python virtual environment

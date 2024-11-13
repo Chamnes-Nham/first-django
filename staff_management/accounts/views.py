@@ -91,7 +91,7 @@ class UserLoginView(views.APIView):
         
 @extend_schema_view(
     post=extend_schema(
-        request=RefreshTokenSerializer,  # Use the serializer you created
+        request=RefreshTokenSerializer, 
         responses={200: 'Logout successful'}
     )
 )        
