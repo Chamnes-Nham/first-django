@@ -7,8 +7,12 @@ from accounts.views import (UserLoginView,
                              AdminUserListView,
                              AdminUserRoleUpdateView,
                              AdminUserDetailView,
-                             AuditLogListView
-                            )
+                             AuditLogListView,
+                             AddPermissionView,
+                             GetDataView,
+                             AdminPermissionView,
+                             login_page,
+                           )
 
 urlpatterns = [
     path("signup/", UserSignupView.as_view(), name="user-signup"),
@@ -20,4 +24,8 @@ urlpatterns = [
     path("api/admin/user/<int:pk>/", AdminUserDetailView.as_view(), name="admin-detail"),
     path("api/admin/user/<int:user_id>/role/", AdminUserRoleUpdateView.as_view(), name="udate-role"),
     path('audit-logs/', AuditLogListView.as_view(), name='audit-logs'),
+    path('addpermissions/', AddPermissionView.as_view(), name="add-permission "),
+    path('getdata/', GetDataView.as_view(), name="get-data-permission"),
+    path('admin-permission/', AdminPermissionView.as_view(), name="admin-permission"),
+    path('login-page/', login_page, name="login-page"),
 ]

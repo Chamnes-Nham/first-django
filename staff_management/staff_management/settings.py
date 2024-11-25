@@ -56,16 +56,18 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-
-
 ]
 
 ROOT_URLCONF = 'staff_management.urls'
 
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Add a global templates folder if needed
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -86,8 +88,14 @@ WSGI_APPLICATION = 'staff_management.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        # 'ENGINE': 'django.db.backends.sqlite3',
+        # 'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'staffmanagements',
+        'USER': 'postgres',
+        'PASSWORD': 'sarannsari',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -159,8 +167,8 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
-    'SCHEMA_PATH_PREFIX': '/api/',  # Optional prefix for clarity
-    'PREPROCESSING_HOOKS': [],  # Optional hooks to customize
+    'SCHEMA_PATH_PREFIX': '/api/',  
+    'PREPROCESSING_HOOKS': [],  
     'POSTPROCESSING_HOOKS': [],
     'AUTO_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }

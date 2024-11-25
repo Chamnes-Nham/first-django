@@ -3,13 +3,12 @@ from django.contrib.auth.models import AbstractUser
 from auditlog.registry import auditlog
 
 
-
 # Create your models here.
 class CustomUser(AbstractUser):
     ROLE_CHOICES = [
         ('admin', 'Admin'),
         ('staff', 'Staff'),
-        ('hr', 'Hr'),
+       
     ]
     
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="staff")
@@ -21,7 +20,14 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
     
+class RolePermission(models.Model):
+    role = models.CharField(max_length=10, choices=CustomUser.ROLE_CHOICES)
+    table_name = models.CharField(max_length=100)
+    fields_allowed = models.JSONField(default=list)
 
+    def __str__(self):
+        return f"{self.role} - {self.table_name}"
+    
 class AuditLog(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
     action = models.CharField(max_length=255)
@@ -33,3 +39,4 @@ class AuditLog(models.Model):
         return f'{self.user} - {self.action} at {self.timestamp}'
     
 auditlog.register(CustomUser)
+
