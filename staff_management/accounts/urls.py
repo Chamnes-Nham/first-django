@@ -12,6 +12,7 @@ from accounts.views import (UserLoginView,
                              GetDataView,
                              AdminPermissionView,
                              login_page,
+                            
                            )
 
 urlpatterns = [

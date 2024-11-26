@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from .serializers import UserSerializer, RefreshTokenSerializer, AuditLogSerializer, RolePermissionSerializer, CustomUserSerializer
 from rest_framework_simplejwt.tokens import RefreshToken 
 from rest_framework.views import APIView
+from django.views import View
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from accounts.permission import IsAdminUser, IsAdminOrReadOnly
 from accounts.models.accounts_model import CustomUser, AuditLog, RolePermission
@@ -14,7 +15,6 @@ from drf_spectacular.utils import extend_schema_view, extend_schema
 from .utils import get_dynamic_permission_fields
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
@@ -26,6 +26,7 @@ class AuditLogListView(generics.ListAPIView):
     serializer_class = AuditLogSerializer
     permission_classes = [IsAdminUser]
 
+## register or create user
 class UserSignupView(generics.CreateAPIView):
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
@@ -59,7 +60,7 @@ class UserSignupView(generics.CreateAPIView):
         except IntegrityError:
             return Response({"error":"User has already existing."}, status=status.HTTP_400_BAD_REQUEST)
 
-# @method_decorator(csrf_exempt, name="dispatch")
+## login user
 class UserLoginView(APIView):
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
@@ -185,7 +186,8 @@ def login_page(request):
         error = "Invalid username or password."
 
     return render(request, "login.html", {"error": error})
-        
+
+## Logout user        
 @extend_schema_view(
     post=extend_schema(
         request=RefreshTokenSerializer, 
@@ -204,7 +206,8 @@ class UserLogoutView(APIView):
             return Response({'detail': 'Logout successfully.'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'detail': str(e)}, status=400)
-        
+
+## dashboard for view number of role users        
 class AdminDashboardView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     serializer_class = UserSerializer
@@ -218,16 +221,19 @@ class AdminDashboardView(APIView):
             "staff_count": count_staff,
         })
 
+## view all users
 class AdminUserListView(generics.ListAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
 
+## retrive, update, delete user by id
 class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
 
+## update user role
 class AdminUserRoleUpdateView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     serializer_class = UserSerializer
@@ -244,7 +250,8 @@ class AdminUserRoleUpdateView(APIView):
                 return Response({"error": "Invalide role!!"}, status=status.HTTP_400_BAD_REQUEST)
         except CustomUser.DoesNotExist:
             return Response({"error": "User Not Found!!!"}, status=status.HTTP_404_NOT_FOUND)
-    
+
+  ## view only current user  
 class UserProfile(generics.RetrieveUpdateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
@@ -253,6 +260,7 @@ class UserProfile(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
+## add permission for all users by role
 class AddPermissionView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -269,7 +277,8 @@ class AddPermissionView(APIView):
         return HttpResponse(template)
         #     return Response({'detail': 'Permission has added successfully.'}, status=status.HTTP_201_CREATED)
         # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+ ## access data(get) after permission   
 class GetDataView(GenericAPIView):
     serializer_class = CustomUserSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
@@ -299,8 +308,8 @@ class GetDataView(GenericAPIView):
         queryset = CustomUser.objects.all()
         serializer = self.get_serializer(queryset, many=True, fields=allowed_fields)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-
+        
+## add, update, get, delete permission for specific users by id
 class AdminPermissionView(APIView):
 
     @method_decorator(login_required)
