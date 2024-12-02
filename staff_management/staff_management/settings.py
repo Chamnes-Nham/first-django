@@ -187,6 +187,4 @@ CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SECURE = True 
 WSGI_APPLICATION = 'staff_management.wsgi.application'
 
-MEDIA_ROOT = BASE_DIR/ 'media'
-MEDIA_URL = '/media/'
 
