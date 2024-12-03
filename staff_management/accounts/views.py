@@ -126,40 +126,6 @@ class UserLoginView(APIView):
                 status=status.HTTP_200_OK,
             )
 
-            # if user.role == "admin":
-            #     login(request, user)
-            #     return Response(
-            #         {
-            #             "message": "Admin login successful.",
-            #             "user": {
-            #                 "id": user.id,
-            #                 "username": user.username,
-            #                 "email": user.email,
-            #                 "role": user.role,
-            #             },
-            #             "session": request.session.session_key,
-            #         },
-            #         status=status.HTTP_200_OK,
-            #     )
-            # else:
-            #     refresh = RefreshToken.for_user(user)
-            #     return Response(
-            #         {
-            #             "message": "Login successful.",
-            #             "user": {
-            #                 "id": user.id,
-            #                 "username": user.username,
-            #                 "email": user.email,
-            #                 "role": user.role,
-            #             },
-            #             "token": {
-            #                 "access_token": str(refresh.access_token),
-            #                 "refresh_token": str(refresh),
-            #             },
-            #         },
-            #         status=status.HTTP_200_OK,
-            #     )
-
         except CustomUser.DoesNotExist:
             return Response(
                 {"detail": "User not found!"},
@@ -192,7 +158,6 @@ def login_page(request):
             response.set_cookie("sessionid", session_id, secure=False, httponly=True)
             return response
         error = "Invalid username or password."
-        return
 
     return render(request, "login.html", {"error": error})
 
@@ -333,8 +298,7 @@ class AddPermissionView(APIView):
             {"message": "Error: " + str(serializer.errors)},
         )
         return HttpResponse(template)
-        #     return Response({'detail': 'Permission has added successfully.'}, status=status.HTTP_201_CREATED)
-        # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     def put(self, request):
         role = request.data.get("role")

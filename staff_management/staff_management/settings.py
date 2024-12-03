@@ -156,8 +156,8 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.AnonRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'user': '3/min',   
-        'anon': '3/min',   
+        'user': '10/min',   
+        'anon': '10/min',   
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
