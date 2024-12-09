@@ -32,6 +32,9 @@ from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from rest_framework.decorators import action
 from django.utils.timezone import now
+from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
+from django.apps import apps
 
 
 class AuditLogListView(generics.ListAPIView):
@@ -299,7 +302,6 @@ class AddPermissionView(APIView):
         )
         return HttpResponse(template)
 
-
     def put(self, request):
         role = request.data.get("role")
         table_name = request.data.get("table_name")
@@ -402,7 +404,7 @@ class GetDataPermissionById(APIView):
 
 ## add, update, get, delete permission for specific users by id
 class AdminPermissionView(APIView):
-    permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
     @method_decorator(login_required)
     def dispatch(self, *args, **kwargs):
@@ -471,8 +473,8 @@ class AdminPermissionView(APIView):
         user = request.user
         id = request.data.get("user_id")
 
-        if user.role != "admin":
-            return Response({"message": "Only Admin user can delete permission!!"})
+        # if user.role != "admin":
+        #     return Response({"message": "Only Admin user can delete permission!!"})
         queryset = UserPermission.objects.get(user_id=id)
         queryset.delete()
         return Response({"message": "Permission has delete successfully."})
@@ -525,4 +527,224 @@ class UserDeleted(APIView):
     def get(self, request):
         queryset = CustomUser.all_objects.filter(deleted__isnull=False)
         serializer = UserSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CreateDefaultGroup(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        group_name = request.data.get("name")
+
+        if not group_name:
+            return Response(
+                {"message": "group name is require!!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            group, create = Group.objects.get_or_create(name=group_name)
+
+            if create:
+                return Response(
+                    {"detail": f"Group: {group_name} has created."},
+                    status=status.HTTP_201_CREATED,
+                )
+
+            return Response(
+                {"detail": f"Group: {group_name} has already existed."},
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class AddPermissonForGroup(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        group_name = request.data.get("name")
+        table_name = request.data.get("table_name")
+        fields = request.data.get("fields", [])
+
+        if not group_name or not table_name or not fields:
+            return Response(
+                {"message": "group name, table name and fields allowed are require!!!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            group = Group.objects.get(name=group_name)
+            content_type = ContentType.objects.get(model=table_name.lower())
+
+            for field in fields:
+                perm_codename = f"can_access_{table_name.lower()}_{field}"
+                permission, created = Permission.objects.get_or_create(
+                    codename=perm_codename,
+                    defaults={
+                        "name": f"can access fields: {field} of table name: {table_name}",
+                        "content_type": content_type,
+                    },
+                )
+                group.permissions.add(permission)
+
+            return Response(
+                {
+                    "message": f"fields: {fields} of table: {table_name} has create successfully."
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        except Group.DoesNotExist:
+            return Response(
+                {"error": f"Group: {group_name} doesn't exists!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ContentType.DoesNotExist:
+            return Response(
+                {"error": f"Content_Type: {content_type} doesn't exist!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Hello{str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+class GetPermissionByGroup(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        accessible_data = {}
+
+        user_groups = user.groups.all()
+        if not user_groups:
+            return Response({"error": "User is not assigned to any group."}, status=403)
+
+        group_permissions = Permission.objects.filter(group__in=user_groups).distinct()
+
+        for perm in group_permissions:
+            if perm.codename.startswith("can_access_"):
+                try:
+                    codename_parts = perm.codename.split("_")
+                    table_name = codename_parts[2]
+                    field_name = "_".join(codename_parts[3:])
+
+                    content_type = perm.content_type
+                    model = apps.get_model(content_type.app_label, table_name)
+
+                    if not model:
+                        continue
+
+                    queryset = model.objects.all()
+
+                    if table_name not in accessible_data:
+                        accessible_data[table_name] = []
+
+                    for obj in queryset:
+                        obj_data = next(
+                            (
+                                item
+                                for item in accessible_data[table_name]
+                                if item["id"] == obj.id
+                            ),
+                            None,
+                        )
+                        if not obj_data:
+                            obj_data = {"id": obj.id}
+                            accessible_data[table_name].append(obj_data)
+
+                        if hasattr(obj, field_name):
+                            obj_data[field_name] = getattr(obj, field_name)
+
+                except Exception as e:
+                    print(f"Error processing permission {perm.codename}: {e}")
+                    continue
+
+        return Response({"accessible_data": accessible_data}, status=200)
+
+
+class GetDataByPermission(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        if user.is_superuser == True:
+            queryset = CustomUser.objects.all()
+            serializer = CustomUserSerializer(queryset, many=True)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        if not user.is_authenticated:
+            return Response(
+                {"message": "Authentication credential were not provided!!"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        id = getattr(user, "id", None)
+        table_name = "customuser"
+        role = getattr(user, "role", None)
+        allowed_fields = get_dynamic_permission_byid(id, role, table_name)
+
+        if not allowed_fields:
+       
+            accessible_data = {}
+            user_groups = user.groups.all()
+            if not user_groups:
+                return Response(
+                    {"message": f"User: {user_groups} doesn't exists in any groups."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            group_permissions = Permission.objects.filter(
+                group__in=user_groups
+            ).distinct()
+
+            for perm in group_permissions:
+                if perm.codename.startswith("can_access_"):
+                    try:
+                        codename_parts = perm.codename.split("_")
+                        tables_name = codename_parts[2]
+                        fields_name = "_".join(codename_parts[3:])
+
+                        content_type = perm.content_type
+                        model = apps.get_model(content_type.app_label, tables_name)
+                        if not model:
+                            continue
+
+                        queryset = model.objects.all()
+
+                        if tables_name not in accessible_data:
+                            accessible_data[tables_name] = []
+
+                        for obj in queryset:
+                            obj_data = next(
+                                (
+                                    item
+                                    for item in accessible_data[table_name]
+                                    if item["id"] == obj.id
+                                ),
+                                None,
+                            )
+                        if not obj_data:
+                            obj_data = {"id": obj.id}
+                            accessible_data[table_name].append(obj_data)
+
+                        if hasattr(obj, fields_name):
+                            obj_data[fields_name] = getattr(obj, fields_name)
+
+                    except Exception as e:
+                        print(f"Error processing permission {perm.codename}: {e}")
+                        continue
+
+                    return Response({"accessible_data": accessible_data}, status=200)
+
+        queryset = CustomUser.objects.all()
+        serializer = CustomUserSerializer(queryset, many=True, fields=allowed_fields)
+
         return Response(serializer.data, status=status.HTTP_200_OK)

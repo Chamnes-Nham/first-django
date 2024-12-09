@@ -19,6 +19,10 @@ from accounts.views import (
     RestoreSoftDeleteView,
     UserNotDelete,
     UserDeleted,
+    CreateDefaultGroup,
+    AddPermissonForGroup,
+    GetPermissionByGroup,
+    GetDataByPermission,
 )
 
 urlpatterns = [
@@ -53,4 +57,8 @@ urlpatterns = [
     ),
     path("data/", UserNotDelete.as_view(), name="user-not-delete"),
     path("delete-history/", UserDeleted.as_view(), name="history-delelted"),
+    path("create_group/", CreateDefaultGroup.as_view(), name="create_group"),
+    path("add_permission_group/", AddPermissonForGroup.as_view(), name="add-group-permissions"),
+    path("get_data_group_permission/", GetPermissionByGroup.as_view(), name="get-data-group-permission"),
+    path("get_api_user/", GetDataByPermission.as_view(), name="get-api"),
 ]

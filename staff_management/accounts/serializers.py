@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.serializers import ModelSerializer
 from accounts.models.accounts_model import CustomUser, AuditLog, RolePermission, UserPermission
 
 
