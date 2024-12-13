@@ -1,12 +1,13 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, filters
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from .serializers import (
     UserSerializer,
     RefreshTokenSerializer,
-    AuditLogSerializer,
     RolePermissionSerializer,
     CustomUserSerializer,
     UserPermissionSerializer,
+    AuditLogSerializer,
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -14,7 +15,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from accounts.permission import IsAdminUser, IsAdminOrReadOnly
 from accounts.models.accounts_model import (
     CustomUser,
-    AuditLog,
     UserPermission,
     RolePermission,
 )
@@ -22,7 +22,11 @@ from rest_framework.throttling import UserRateThrottle
 from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from drf_spectacular.utils import extend_schema_view, extend_schema
-from .utils import get_dynamic_permission_fields, get_dynamic_permission_byid
+from .utils import (
+    get_dynamic_permission_fields,
+    get_dynamic_permission_byid,
+    get_accessible_data_by_group,
+)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.utils.decorators import method_decorator
@@ -35,12 +39,12 @@ from django.utils.timezone import now
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.apps import apps
-
-
-class AuditLogListView(generics.ListAPIView):
-    queryset = AuditLog.objects.all().order_by("-timestamp")
-    serializer_class = AuditLogSerializer
-    permission_classes = [IsAdminUser]
+from auditlog.models import LogEntry
+from django_filters.rest_framework import DjangoFilterBackend
+from accounts.filter import UserFilter
+from rest_framework.mixins import ListModelMixin
+from rest_framework.viewsets import GenericViewSet
+from rest_framework.exceptions import PermissionDenied
 
 
 ## register or create user
@@ -232,6 +236,8 @@ class AdminUserListView(generics.ListAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ["id", "username", "email"]
 
 
 ## retrive, update, delete user by id
@@ -620,131 +626,114 @@ class GetPermissionByGroup(APIView):
 
     def get(self, request):
         user = request.user
-        accessible_data = {}
+        accessible_data, success = get_accessible_data_by_group(user)
 
-        user_groups = user.groups.all()
-        if not user_groups:
-            return Response({"error": "User is not assigned to any group."}, status=403)
-
-        group_permissions = Permission.objects.filter(group__in=user_groups).distinct()
-
-        for perm in group_permissions:
-            if perm.codename.startswith("can_access_"):
-                try:
-                    codename_parts = perm.codename.split("_")
-                    table_name = codename_parts[2]
-                    field_name = "_".join(codename_parts[3:])
-
-                    content_type = perm.content_type
-                    model = apps.get_model(content_type.app_label, table_name)
-
-                    if not model:
-                        continue
-
-                    queryset = model.objects.all()
-
-                    if table_name not in accessible_data:
-                        accessible_data[table_name] = []
-
-                    for obj in queryset:
-                        obj_data = next(
-                            (
-                                item
-                                for item in accessible_data[table_name]
-                                if item["id"] == obj.id
-                            ),
-                            None,
-                        )
-                        if not obj_data:
-                            obj_data = {"id": obj.id}
-                            accessible_data[table_name].append(obj_data)
-
-                        if hasattr(obj, field_name):
-                            obj_data[field_name] = getattr(obj, field_name)
-
-                except Exception as e:
-                    print(f"Error processing permission {perm.codename}: {e}")
-                    continue
+        if not success:
+            return Response(accessible_data, status=403)
 
         return Response({"accessible_data": accessible_data}, status=200)
 
 
 class GetDataByPermission(APIView):
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
 
     def get(self, request):
         user = request.user
 
-        if user.is_superuser == True:
+        if user.is_superuser:
             queryset = CustomUser.objects.all()
             serializer = CustomUserSerializer(queryset, many=True)
-
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         if not user.is_authenticated:
             return Response(
-                {"message": "Authentication credential were not provided!!"},
+                {"message": "Authentication credentials were not provided!"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
         id = getattr(user, "id", None)
         table_name = "customuser"
         role = getattr(user, "role", None)
-        allowed_fields = get_dynamic_permission_byid(id, role, table_name)
+
+        allowed_fields = get_dynamic_permission_byid(id, table_name)
 
         if not allowed_fields:
-       
-            accessible_data = {}
-            user_groups = user.groups.all()
-            if not user_groups:
-                return Response(
-                    {"message": f"User: {user_groups} doesn't exists in any groups."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            group_permissions = Permission.objects.filter(
-                group__in=user_groups
-            ).distinct()
 
-            for perm in group_permissions:
-                if perm.codename.startswith("can_access_"):
-                    try:
-                        codename_parts = perm.codename.split("_")
-                        tables_name = codename_parts[2]
-                        fields_name = "_".join(codename_parts[3:])
+            accessible_data, success = get_accessible_data_by_group(user)
 
-                        content_type = perm.content_type
-                        model = apps.get_model(content_type.app_label, tables_name)
-                        if not model:
-                            continue
+            if not success:
+                return Response(accessible_data, status=403)
 
-                        queryset = model.objects.all()
-
-                        if tables_name not in accessible_data:
-                            accessible_data[tables_name] = []
-
-                        for obj in queryset:
-                            obj_data = next(
-                                (
-                                    item
-                                    for item in accessible_data[table_name]
-                                    if item["id"] == obj.id
-                                ),
-                                None,
-                            )
-                        if not obj_data:
-                            obj_data = {"id": obj.id}
-                            accessible_data[table_name].append(obj_data)
-
-                        if hasattr(obj, fields_name):
-                            obj_data[fields_name] = getattr(obj, fields_name)
-
-                    except Exception as e:
-                        print(f"Error processing permission {perm.codename}: {e}")
-                        continue
-
-                    return Response({"accessible_data": accessible_data}, status=200)
+            return Response(
+                {"accessible_data": accessible_data}, status=status.HTTP_200_OK
+            )
 
         queryset = CustomUser.objects.all()
         serializer = CustomUserSerializer(queryset, many=True, fields=allowed_fields)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LogEntryAPIView(ListAPIView):
+    queryset = LogEntry.objects.all()
+    serializer_class = AuditLogSerializer
+
+
+class UserFilterView(ListModelMixin, GenericViewSet):
+    queryset = CustomUser.objects.all()
+    serializer_class = CustomUserSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = UserFilter
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_superuser:
+            return CustomUser.objects.all()
+
+        id = getattr(user, "id", None)
+        table_name = "customuser"
+
+        allowed_fields = get_dynamic_permission_byid(id, table_name)
+
+        if not allowed_fields:
+            queryset, fields, error_data, success = get_accessible_data_by_group(user)
+
+            if not success:
+                raise PermissionDenied(
+                    error_data.get("error", "You can not access data.")
+                )
+            self.request.fields = fields
+            return queryset
+
+        return CustomUser.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        user = request.user
+
+        if user.is_superuser:
+            get_queryset = self.filter_queryset(self.get_queryset())
+            serializer = self.get_serializer(get_queryset, many=True)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        id = getattr(user, "id", None)
+        table_name = "customuser"
+
+        allowed_fields = get_dynamic_permission_byid(id, table_name)
+
+        if not allowed_fields:
+            if user.is_superuser:
+                queryset = self.filter_queryset(self.get_queryset())
+                serializer = self.get_serializer(queryset, many=True)
+
+            querysets = self.filter_queryset(self.get_queryset())
+            fields = getattr(self.request, "fields", None)
+            serializers = self.get_serializer(querysets, many=True, fields=fields)
+            return Response(serializers.data)
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True, fields=allowed_fields)
+
+        return Response({f"{table_name}": serializer.data}, status=status.HTTP_200_OK)

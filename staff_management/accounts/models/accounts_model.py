@@ -123,17 +123,4 @@ class UserPermission(models.Model):
         return f"User: {self.user.id}, Table: {self.table_name}"
 
 
-class AuditLog(models.Model):
-    user = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, null=True, blank=True
-    )
-    action = models.CharField(max_length=255)
-    timestamp = models.DateTimeField(auto_now_add=True)
-    ip_address = models.GenericIPAddressField(null=True, blank=True)
-    details = models.TextField(null=True, blank=True)
-
-    def __str__(self):
-        return f"{self.user} - {self.action} at {self.timestamp}"
-
-
 auditlog.register(CustomUser)

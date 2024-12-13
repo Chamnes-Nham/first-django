@@ -8,7 +8,6 @@ from accounts.views import (
     AdminUserListView,
     AdminUserRoleUpdateView,
     AdminUserDetailView,
-    AuditLogListView,
     AddPermissionView,
     GetDataView,
     AdminPermissionView,
@@ -23,6 +22,8 @@ from accounts.views import (
     AddPermissonForGroup,
     GetPermissionByGroup,
     GetDataByPermission,
+    LogEntryAPIView,
+    UserFilterView,
 )
 
 urlpatterns = [
@@ -40,7 +41,6 @@ urlpatterns = [
         AdminUserRoleUpdateView.as_view(),
         name="udate-role",
     ),
-    path("audit-logs/", AuditLogListView.as_view(), name="audit-logs"),
     path("addpermissions/", AddPermissionView.as_view(), name="add-permission "),
     path("getdata/", GetDataView.as_view(), name="get-data-permission"),
     path("admin-permission/", AdminPermissionView.as_view(), name="admin-permission"),
@@ -61,4 +61,6 @@ urlpatterns = [
     path("add_permission_group/", AddPermissonForGroup.as_view(), name="add-group-permissions"),
     path("get_data_group_permission/", GetPermissionByGroup.as_view(), name="get-data-group-permission"),
     path("get_api_user/", GetDataByPermission.as_view(), name="get-api"),
+    path("audit_log/", LogEntryAPIView.as_view(), name="audit-log"),
+    path("user_filter_view/", UserFilterView.as_view({'get': 'list'}), name="user-view-filter"),
 ]
