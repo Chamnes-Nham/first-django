@@ -85,3 +85,6 @@ logs/
 # Other
 *.bak
 *.tmp
+
+#.env file
+.env

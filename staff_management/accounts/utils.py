@@ -44,7 +44,7 @@ def get_accessible_data_by_group(user):
         )
 
     group_permissions = Permission.objects.filter(group__in=user_groups).distinct()
-    accessible_user_ids = set()  # Store IDs of accessible users
+    accessible_user_ids = set()  # Store ID of accessible users
     fields = set()  # Store allowed fields
 
     for perm in group_permissions:
@@ -80,5 +80,6 @@ def get_accessible_data_by_group(user):
             {"error": "No accessible users found for the user's group."},
             False,
         )
-
+    
+    # return CustomUser.objects.filter(id__in=accessible_user_ids), list(fields), {}, True
     return CustomUser.objects.filter(id__in=accessible_user_ids), list(fields), {}, True

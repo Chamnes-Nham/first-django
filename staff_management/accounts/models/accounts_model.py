@@ -10,13 +10,11 @@ from django.conf import settings
 class CustomUserManager(SafeDeleteManager, BaseUserManager):
     def get_by_natural_key(self, username):
         return self.get(username=username)
-    
+
     def create_user(self, username, email, password=None, **extra_fields):
-        """
-        Creates and returns a regular user.
-        """
+
         if not email:
-            raise ValueError('The Email field must be set')
+            raise ValueError("The Email field must be set")
         email = self.normalize_email(email)
         user = self.model(username=username, email=email, **extra_fields)
         user.set_password(password)
@@ -27,16 +25,15 @@ class CustomUserManager(SafeDeleteManager, BaseUserManager):
         """
         Creates and returns a superuser.
         """
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(username, email, password, **extra_fields)
-
 
 
 class CustomUser(AbstractUser, SafeDeleteModel):
@@ -77,7 +74,7 @@ class CustomUser(AbstractUser, SafeDeleteModel):
         super(CustomUser, self).delete(**kwargs)
 
     def restore(self, **kwargs):
-      
+
         if self.deleted is not None:
             self.deleted = None
             self.deleted_by = None
@@ -121,6 +118,41 @@ class UserPermission(models.Model):
 
     def __str__(self):
         return f"User: {self.user.id}, Table: {self.table_name}"
+
+
+class Task(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("in_progress", "Inprogress"),
+        ("completed", "Completed"),
+    ]
+    PRIORITY_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+    ]
+
+    title = models.CharField(max_length=100)
+    descriptions = models.TextField(blank=True, null=True)
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="task_assign_to",
+    )
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="task_assign_by",
+    )
+    priority = models.CharField(
+        max_length=10, choices=PRIORITY_CHOICES, default="medium"
+    )
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default="pending")
+    created_at = models.DateTimeField(auto_now_add=now)
+    updated_at = models.DateTimeField(auto_now=now)
+
+    def __str__(self):
+        return self.title
 
 
 auditlog.register(CustomUser)

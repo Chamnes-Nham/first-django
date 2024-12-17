@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
-from accounts.models.accounts_model import CustomUser, RolePermission, UserPermission
+from accounts.models.accounts_model import CustomUser, RolePermission, UserPermission, Task
 from auditlog.models import LogEntry
 
 
@@ -64,3 +64,8 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
 class RefreshTokenSerializer(serializers.Serializer):
     refresh = serializers.CharField()
+
+class TaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Task
+        fields = '__all__'

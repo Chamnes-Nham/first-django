@@ -1,4 +1,4 @@
-from rest_framework import generics, status, filters
+from rest_framework import generics, status, filters, viewsets, permissions
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from .serializers import (
@@ -8,6 +8,7 @@ from .serializers import (
     CustomUserSerializer,
     UserPermissionSerializer,
     AuditLogSerializer,
+    TaskSerializer,
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
@@ -17,6 +18,7 @@ from accounts.models.accounts_model import (
     CustomUser,
     UserPermission,
     RolePermission,
+    Task,
 )
 from rest_framework.throttling import UserRateThrottle
 from django.db import IntegrityError
@@ -41,10 +43,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.apps import apps
 from auditlog.models import LogEntry
 from django_filters.rest_framework import DjangoFilterBackend
-from accounts.filter import UserFilter
+from accounts.filter import UserFilter, TaskFilter
 from rest_framework.mixins import ListModelMixin
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.exceptions import PermissionDenied
+from .paginations import CustomPagination
 
 
 ## register or create user
@@ -478,12 +481,24 @@ class AdminPermissionView(APIView):
     def delete(self, request, *args, **kwargs):
         user = request.user
         id = request.data.get("user_id")
-
-        # if user.role != "admin":
-        #     return Response({"message": "Only Admin user can delete permission!!"})
-        queryset = UserPermission.objects.get(user_id=id)
-        queryset.delete()
-        return Response({"message": "Permission has delete successfully."})
+        if not id:
+            return Response(
+                {"message": "User id is require."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            permission = UserPermission.objects.filter(user_id=id).first()
+            if not permission:
+                return Response(
+                    {"error": f"User {user} don't have permission for delete!!"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            permission.delete()
+            return Response({"message": "Permission has delete successfully."})
+        except Exception as e:
+            return Response(
+                {"error": f"An error is ocure: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class SoftDeleteUserView(APIView):
@@ -620,6 +635,37 @@ class AddPermissonForGroup(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+    def get(self, request):
+        group_name = request.query_params.get("name")
+        table_name = request.query_params.get("table")
+
+        if not group_name and not table_name:
+            return Response(
+                {"message": "Group and table name are require!!"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        group = Group.objects.get(name=group_name)
+        permission = group.permissions.filter(
+            codename__startswith=f"can_access_{table_name.lower()}_"
+        )
+
+        if not permission.exists():
+            return Response(
+                {"error": "You don't have group permission assigned."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        data = (
+            {
+                "codename": perm.codename,
+                "name": perm.name,
+                "fields": perm.codename.split("_")[-1],
+            }
+            for perm in permissions
+        )
+        return Response({data})
+
 
 class GetPermissionByGroup(APIView):
     permission_classes = [IsAuthenticated]
@@ -686,6 +732,7 @@ class UserFilterView(ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_class = UserFilter
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -712,12 +759,21 @@ class UserFilterView(ListModelMixin, GenericViewSet):
 
     def list(self, request, *args, **kwargs):
         user = request.user
+        pagination_param = request.query_params.get("pagination", "true").lower()
+        filtered_queryset = self.filter_queryset(self.get_queryset())
 
+        if pagination_param == "true":
+            paginated_queryset = self.paginate_queryset(filtered_queryset)
+        else:
+            paginated_queryset = filtered_queryset
         if user.is_superuser:
-            get_queryset = self.filter_queryset(self.get_queryset())
-            serializer = self.get_serializer(get_queryset, many=True)
+            serializer = self.get_serializer(paginated_queryset, many=True)
 
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return (
+                self.get_paginated_response({f"{table_name}": serializer.data})
+                if pagination_param == "true"
+                else Response(serializer.data)
+            )
 
         id = getattr(user, "id", None)
         table_name = "customuser"
@@ -726,14 +782,61 @@ class UserFilterView(ListModelMixin, GenericViewSet):
 
         if not allowed_fields:
             if user.is_superuser:
-                queryset = self.filter_queryset(self.get_queryset())
-                serializer = self.get_serializer(queryset, many=True)
+                serializer = self.get_serializer(paginated_queryset, many=True)
+                return (
+                    self.get_paginated_response({f"{table_name}": serializer.data})
+                    if pagination_param == "true"
+                    else Response({f"{table_name}": serializer.data})
+                )
 
-            querysets = self.filter_queryset(self.get_queryset())
             fields = getattr(self.request, "fields", None)
-            serializers = self.get_serializer(querysets, many=True, fields=fields)
-            return Response(serializers.data)
-        queryset = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(queryset, many=True, fields=allowed_fields)
+            serializer = self.get_serializer(
+                paginated_queryset, many=True, fields=fields
+            )
+            return (
+                self.get_paginated_response({f"{table_name}": serializer.data})
+                if pagination_param == "true"
+                else Response({f"{table_name}": serializer.data})
+            )
 
-        return Response({f"{table_name}": serializer.data}, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(
+            paginated_queryset, many=True, fields=allowed_fields
+        )
+
+        return (
+            self.get_paginated_response({f"{table_name}": serializer.data})
+            if pagination_param == "true"
+            else Response({f"{table_name}": serializer.data})
+        )
+
+
+class TastViewSets(viewsets.ModelViewSet):
+    queryset = Task.objects.all()
+    serializer_class = TaskSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = TaskFilter
+
+    def create(self, request, *args, **kwargs):
+        print("POST request received:", request.data)
+        data = request.data.copy()
+        data["assigned_by"] = request.user.id
+        seriailizer = self.get_serializer(data=data)
+
+        if seriailizer.is_valid():
+            seriailizer.save()
+            return Response(
+                {"message": "Task has created successfully.", "data": seriailizer.data},
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(
+            {"error": "You cannot add task."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_superuser:
+            return Task.objects.all()
+
+        return Task.objects.filter(assigned_to=user)

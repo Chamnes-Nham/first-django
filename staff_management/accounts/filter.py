@@ -1,11 +1,10 @@
 import django_filters
-from django.contrib.auth import get_user_model
-from accounts.models.accounts_model import CustomUser
-from rest_framework import filters
 from django.contrib.auth.models import Permission
 from django.apps import apps
 from rest_framework.filters import BaseFilterBackend
 from django.db.models import Q
+from accounts.models.accounts_model import CustomUser, Task
+
 
 
 class UserFilter(django_filters.FilterSet):
@@ -16,6 +15,17 @@ class UserFilter(django_filters.FilterSet):
     class Meta:
         model = CustomUser
         fields = ["username", "email", "id"]
+
+class TaskFilter(django_filters.FilterSet):
+    id = django_filters.CharFilter(field_name="id")
+    assigned_to_username = django_filters.CharFilter(field_name="assigned_to__username", lookup_expr="icontains")
+    assigned_to_role = django_filters.CharFilter(field_name="assigned_to__role", lookup_expr="icontains")
+    assigned_by_username = django_filters.CharFilter(field_name="assigned_by__username", lookup_expr="icontains")
+    priority = django_filters.ChoiceFilter(choices=Task.PRIORITY_CHOICES)
+
+    class Meta:
+        model = Task
+        fields = ['id', 'assigned_to_username', 'assigned_to_role', 'assigned_by_username', 'priority']
 
 
 class AccessibleDataFilterBackend(BaseFilterBackend):
@@ -57,3 +67,4 @@ class AccessibleDataFilterBackend(BaseFilterBackend):
                 combined_queryset = combined_queryset.union(queryset)
 
         return combined_queryset
+    
